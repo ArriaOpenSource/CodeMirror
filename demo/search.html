@@ -96,4 +96,8 @@ var editor = CodeMirror.fromTextArea(document.getElementById("code"), {
     <p>For good-looking input dialogs, you also want to include
     <a href="../addon/dialog/dialog.js">addon/dialog/dialog.js</a>
     and <a href="../addon/dialog/dialog.css">addon/dialog/dialog.css</a>.</p>
+    <p>You can modify the amount of vertical pixels around the search result when scrolling,
+      that should be made visible as well, by passing <code>searchScrollMargin</code> parameter into
+      the CodeMirror config. E.g. passing 50 will ensure that there is 50px above and below the
+      highlighted search result. Defaults to 20.</p>
   </article>

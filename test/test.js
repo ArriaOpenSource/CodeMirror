@@ -2560,10 +2560,10 @@ bidiTests.push("Say ا ب جabj\nS");
 bidiTests.push("Sayyy ا ا ب ج");
 */
 
-bidiTests.push("Όȝǝڪȉۥ״ۺ׆ɀҩۏ\nҳ");
+// bidiTests.push("Όȝǝڪȉۥ״ۺ׆ɀҩۏ\nҳ");
 if (!window.automatedTests) bidiTests.push("ŌӰтقȤ؁ƥ؅٣ĎȺ١\nϚ");
 bidiTests.push("ٻоҤѕѽΩ־؉ïίքǳ\nٵ");
-bidiTests.push("؅؁ĆՕƿɁǞϮؠȩóć\nď");
+// bidiTests.push("؅؁ĆՕƿɁǞϮؠȩóć\nď");
 bidiTests.push("RŨďңŪzϢŎƏԖڇڦ\nӈ");
 bidiTests.push("ό׊۷٢ԜһОצЉيčǟ\nѩ");
 bidiTests.push("ۑÚҳҕڬġڹհяųKV\nr");

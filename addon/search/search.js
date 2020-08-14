@@ -171,7 +171,10 @@
       if (!cursor.find(rev)) return;
     }
     cm.setSelection(cursor.from(), cursor.to());
-    cm.scrollIntoView({from: cursor.from(), to: cursor.to()}, 20);
+
+    var scrollConfigOption = cm.getOption("searchScrollMargin");
+    var scrollMargin = isNaN(scrollConfigOption) ? 20 : scrollConfigOption;
+    cm.scrollIntoView({from: cursor.from(), to: cursor.to()}, scrollMargin);
     state.posFrom = cursor.from(); state.posTo = cursor.to();
     if (callback) callback(cursor.from(), cursor.to())
   });}
@@ -232,7 +235,10 @@
                   (start && cursor.from().line == start.line && cursor.from().ch == start.ch)) return;
             }
             cm.setSelection(cursor.from(), cursor.to());
-            cm.scrollIntoView({from: cursor.from(), to: cursor.to()});
+
+            var scrollConfigOption = cm.getOption("searchScrollMargin");
+            var scrollMargin = isNaN(scrollConfigOption) ? 20 : scrollConfigOption;
+            cm.scrollIntoView({from: cursor.from(), to: cursor.to()}, scrollMargin);
             confirmDialog(cm, getDoReplaceConfirm(cm), cm.phrase("Replace?"),
                           [function() {doReplace(match);}, advance,
                            function() {replaceAll(cm, query, text)}]);
