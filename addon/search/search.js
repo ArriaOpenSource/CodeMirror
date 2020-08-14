@@ -172,7 +172,8 @@
     }
     cm.setSelection(cursor.from(), cursor.to());
 
-    var scrollMargin = cm.getOption('searchScrollMargin') || 20;
+    var scrollConfigOption = cm.getOption("searchScrollMargin");
+    var scrollMargin = isNaN(scrollConfigOption) ? 20 : scrollConfigOption;
     cm.scrollIntoView({from: cursor.from(), to: cursor.to()}, scrollMargin);
     state.posFrom = cursor.from(); state.posTo = cursor.to();
     if (callback) callback(cursor.from(), cursor.to())
@@ -235,7 +236,8 @@
             }
             cm.setSelection(cursor.from(), cursor.to());
 
-            var scrollMargin = cm.getOption('searchScrollMargin') || 20;
+            var scrollConfigOption = cm.getOption("searchScrollMargin");
+            var scrollMargin = isNaN(scrollConfigOption) ? 20 : scrollConfigOption;
             cm.scrollIntoView({from: cursor.from(), to: cursor.to()}, scrollMargin);
             confirmDialog(cm, getDoReplaceConfirm(cm), cm.phrase("Replace?"),
                           [function() {doReplace(match);}, advance,
