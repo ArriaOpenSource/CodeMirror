@@ -155,6 +155,7 @@
     } else {
       dialog(cm, getQueryDialog(cm) + getDoCaseSensitive(cm), "Search for:", q, function(inputs) {
         if (inputs.searchQuery && !state.query) cm.operation(function() {
+          getSearchState(cm).caseSensitive = inputs.caseSensitive;
           startSearch(cm, state, inputs.searchQuery);
           state.posFrom = state.posTo = cm.getCursor();
           findNext(cm, rev);
@@ -224,7 +225,6 @@
     var dialogText = '<span class="CodeMirror-search-label">' + (all ? cm.phrase("Replace all:") : cm.phrase("Replace:")) + '</span>';
     dialog(cm, dialogText + getReplaceQueryDialog(cm) + getDoCaseSensitive(cm), dialogText, query, function(inputs) {
       if (!inputs.searchQuery) return;
-      // Save case sensitivty option
       getSearchState(cm).caseSensitive = inputs.caseSensitive;
       query = parseQuery(inputs.searchQuery);
       dialog(cm, getReplacementQueryDialog(cm), cm.phrase("Replace with:"), "", function(text) {
