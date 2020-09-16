@@ -83,14 +83,14 @@
         if (e.keyCode == 13) {
           if (inputs.length > 1) {
             var inputsObj = {};
-            [...inputs].forEach((input) => {
-              if (input.type === "checkbox") {
-                inputsObj[input.id] = input.checked;
-                return;
+            for (var i = 0; i < inputs.length; i++) {
+              if (inputs[i].type === "checkbox") {
+                inputsObj[inputs[i].id] = inputs[i].checked;
+                continue;
               }
 
-              inputsObj[input.id] = input.value
-            });
+              inputsObj[inputs[i].id] = inputs[i].value
+            }
             callback(inputsObj, e)
           } else {
             callback(inp.value, e)
@@ -99,10 +99,11 @@
       });
 
       if (options.closeOnBlur !== false) CodeMirror.on(dialog, "focusout", function (evt) {
-        let targetElement = evt.relatedTarget;
+        var targetElement = evt.relatedTarget;
+
         do {
-          if (targetElement === dialog) {
-            // This is a click inside the dialog, do nothing
+          if (targetElement === dialog || targetElement === null) {
+            // This is a click inside the dialog or outwith the editor, do nothing
             return;
           }
           // Go up the DOM
