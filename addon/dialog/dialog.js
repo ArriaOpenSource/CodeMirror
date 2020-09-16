@@ -99,7 +99,18 @@
       });
 
       if (options.closeOnBlur !== false) CodeMirror.on(dialog, "focusout", function (evt) {
-        if (evt.relatedTarget !== null) close();
+        let targetElement = evt.relatedTarget;
+        do {
+          if (targetElement === dialog) {
+            // This is a click inside the dialog, do nothing
+            return;
+          }
+          // Go up the DOM
+          targetElement = targetElement.parentNode;
+        } while (targetElement);
+
+        // This is a click outside the dialog, close it
+        close();
       });
     } else if (button = dialog.getElementsByTagName("button")[0]) {
       CodeMirror.on(button, "click", function() {
