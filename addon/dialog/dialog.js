@@ -56,7 +56,8 @@
       }
     }
 
-    var inp = dialog.getElementsByTagName("input")[0], button;
+    var inputs = dialog.getElementsByTagName("input"), button;
+    var inp = inputs[0];
     if (inp) {
       inp.focus();
 
@@ -79,7 +80,22 @@
           CodeMirror.e_stop(e);
           close();
         }
-        if (e.keyCode == 13) callback(inp.value, e);
+        if (e.keyCode == 13) {
+          if (inputs.length > 1) {
+            var inputsObj = {};
+            [...inputs].forEach((input) => {
+              if (input.type === "checkbox") {
+                inputsObj[input.id] = input.checked;
+                return;
+              }
+
+              inputsObj[input.id] = input.value
+            });
+            callback(inputsObj, e)
+          } else {
+            callback(inp.value, e)
+          }
+        }
       });
 
       if (options.closeOnBlur !== false) CodeMirror.on(dialog, "focusout", function (evt) {

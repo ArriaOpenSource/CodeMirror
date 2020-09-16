@@ -41,6 +41,7 @@
 
   function SearchState() {
     this.posFrom = this.posTo = this.lastQuery = this.query = null;
+    this.caseSensitive = null;
     this.overlay = null;
   }
 
@@ -48,13 +49,12 @@
     return cm.state.search || (cm.state.search = new SearchState());
   }
 
-  function queryCaseInsensitive(query) {
-    return typeof query == "string" && query == query.toLowerCase();
+  function queryCaseInsensitive(cm) {
+    return !getSearchState(cm).caseSensitive;
   }
 
   function getSearchCursor(cm, query, pos) {
-    // Heuristic: if the query string is all lowercase, do a case insensitive search.
-    return cm.getSearchCursor(query, pos, {caseFold: queryCaseInsensitive(query), multiline: true});
+    return cm.getSearchCursor(query, pos, {caseFold: queryCaseInsensitive(cm), multiline: true});
   }
 
   function persistentDialog(cm, text, deflt, onEnter, onKeyDown) {
@@ -68,7 +68,7 @@
   }
 
   function dialog(cm, text, shortText, deflt, f) {
-    if (cm.openDialog) cm.openDialog(text, f, {value: deflt, selectValueOnOpen: true});
+    if (cm.openDialog) cm.openDialog(text, f, {value: deflt, selectValueOnOpen: true, closeOnBlur: false});
     else f(prompt(shortText, deflt));
   }
 
@@ -103,12 +103,12 @@
   function startSearch(cm, state, query) {
     state.queryText = query;
     state.query = parseQuery(query);
-    cm.removeOverlay(state.overlay, queryCaseInsensitive(state.query));
-    state.overlay = searchOverlay(state.query, queryCaseInsensitive(state.query));
+    cm.removeOverlay(state.overlay, queryCaseInsensitive(cm));
+    state.overlay = searchOverlay(state.query, queryCaseInsensitive(cm));
     cm.addOverlay(state.overlay);
     if (cm.showMatchesOnScrollbar) {
       if (state.annotate) { state.annotate.clear(); state.annotate = null; }
-      state.annotate = cm.showMatchesOnScrollbar(state.query, queryCaseInsensitive(state.query));
+      state.annotate = cm.showMatchesOnScrollbar(state.query, queryCaseInsensitive(cm));
     }
   }
 
@@ -153,9 +153,9 @@
         findNext(cm, rev);
       }
     } else {
-      dialog(cm, getQueryDialog(cm), "Search for:", q, function(query) {
-        if (query && !state.query) cm.operation(function() {
-          startSearch(cm, state, query);
+      dialog(cm, getQueryDialog(cm) + getDoCaseSensitive(cm), "Search for:", q, function(inputs) {
+        if (inputs.searchQuery && !state.query) cm.operation(function() {
+          startSearch(cm, state, inputs.searchQuery);
           state.posFrom = state.posTo = cm.getCursor();
           findNext(cm, rev);
         });
@@ -190,16 +190,19 @@
 
 
   function getQueryDialog(cm)  {
-    return '<span class="CodeMirror-search-label">' + cm.phrase("Search:") + '</span> <input type="text" style="width: 10em" class="CodeMirror-search-field"/> <span style="color: #888" class="CodeMirror-search-hint">' + cm.phrase("(Use /re/ syntax for regexp search)") + '</span>';
+    return '<span class="CodeMirror-search-label">' + cm.phrase("Search:") + '</span> <input type="text" style="width: 10em" id="searchQuery" class="CodeMirror-search-field"/> <span style="color: #888" class="CodeMirror-search-hint">' + cm.phrase("(Use /re/ syntax for regexp search)") + '</span>';
   }
   function getReplaceQueryDialog(cm) {
-    return ' <input type="text" style="width: 10em" class="CodeMirror-search-field"/> <span style="color: #888" class="CodeMirror-search-hint">' + cm.phrase("(Use /re/ syntax for regexp search)") + '</span>';
+    return ' <input type="text" style="width: 10em" id="searchQuery" class="CodeMirror-search-field"/> <span style="color: #888" class="CodeMirror-search-hint">' + cm.phrase("(Use /re/ syntax for regexp search)") + '</span>';
   }
   function getReplacementQueryDialog(cm) {
     return '<span class="CodeMirror-search-label">' + cm.phrase("With:") + '</span> <input type="text" style="width: 10em" class="CodeMirror-search-field"/>';
   }
   function getDoReplaceConfirm(cm) {
     return '<span class="CodeMirror-search-label">' + cm.phrase("Replace?") + '</span> <button>' + cm.phrase("Yes") + '</button> <button>' + cm.phrase("No") + '</button> <button>' + cm.phrase("All") + '</button> <button>' + cm.phrase("Stop") + '</button> ';
+  }
+  function getDoCaseSensitive(cm) {
+    return '<span class="CodeMirror-search-label case-sensitive">' + cm.phrase('Case sensitive:') + ' <input type="checkbox" id="caseSensitive" name="case-sensitive"></span>'
   }
 
   function replaceAll(cm, query, text) {
@@ -208,7 +211,9 @@
         if (typeof query != "string") {
           var match = cm.getRange(cursor.from(), cursor.to()).match(query);
           cursor.replace(text.replace(/\$(\d)/g, function(_, i) {return match[i];}));
-        } else cursor.replace(text);
+        } else {
+          cursor.replace(text);
+        }
       }
     });
   }
@@ -217,9 +222,11 @@
     if (cm.getOption("readOnly")) return;
     var query = cm.getSelection() || getSearchState(cm).lastQuery;
     var dialogText = '<span class="CodeMirror-search-label">' + (all ? cm.phrase("Replace all:") : cm.phrase("Replace:")) + '</span>';
-    dialog(cm, dialogText + getReplaceQueryDialog(cm), dialogText, query, function(query) {
-      if (!query) return;
-      query = parseQuery(query);
+    dialog(cm, dialogText + getReplaceQueryDialog(cm) + getDoCaseSensitive(cm), dialogText, query, function(inputs) {
+      if (!inputs.searchQuery) return;
+      // Save case sensitivty option
+      getSearchState(cm).caseSensitive = inputs.caseSensitive;
+      query = parseQuery(inputs.searchQuery);
       dialog(cm, getReplacementQueryDialog(cm), cm.phrase("Replace with:"), "", function(text) {
         text = parseString(text)
         if (all) {
