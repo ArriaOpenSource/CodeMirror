@@ -122,8 +122,8 @@
       var searchNext = function(inputs, event) {
         CodeMirror.e_stop(event);
         if (!inputs.searchQuery) return;
-        getSearchState(cm).caseSensitive = inputs.caseSensitive;
-        if (inputs.searchQuery != state.queryText) {
+        if (inputs.searchQuery != state.queryText || inputs.caseSensitive != state.caseSensitive) {
+          state.caseSensitive = inputs.caseSensitive;
           startSearch(cm, state, inputs.searchQuery);
           state.posFrom = state.posTo = cm.getCursor();
         }
