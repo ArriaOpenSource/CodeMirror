@@ -119,11 +119,12 @@
     if (q instanceof RegExp && q.source == "x^") q = null
     if (persistent && cm.openDialog) {
       var hiding = null
-      var searchNext = function(query, event) {
+      var searchNext = function(inputs, event) {
         CodeMirror.e_stop(event);
-        if (!query) return;
-        if (query != state.queryText) {
-          startSearch(cm, state, query);
+        if (!inputs.searchQuery) return;
+        getSearchState(cm).caseSensitive = inputs.caseSensitive;
+        if (inputs.searchQuery != state.queryText) {
+          startSearch(cm, state, inputs.searchQuery);
           state.posFrom = state.posTo = cm.getCursor();
         }
         if (hiding) hiding.style.opacity = 1
@@ -135,17 +136,17 @@
             (hiding = dialog).style.opacity = .4
         })
       };
-      persistentDialog(cm, getQueryDialog(cm), q, searchNext, function(event, query) {
+      persistentDialog(cm, getQueryDialog(cm) + getDoCaseSensitive(cm), q, searchNext, function(event, inputs) {
         var keyName = CodeMirror.keyName(event)
         var extra = cm.getOption('extraKeys'), cmd = (extra && extra[keyName]) || CodeMirror.keyMap[cm.getOption("keyMap")][keyName]
         if (cmd == "findNext" || cmd == "findPrev" ||
           cmd == "findPersistentNext" || cmd == "findPersistentPrev") {
           CodeMirror.e_stop(event);
-          startSearch(cm, getSearchState(cm), query);
+          startSearch(cm, getSearchState(cm), inputs.searchQuery);
           cm.execCommand(cmd);
         } else if (cmd == "find" || cmd == "findPersistent") {
           CodeMirror.e_stop(event);
-          searchNext(query, event);
+          searchNext(inputs.searchQuery, event);
         }
       });
       if (immediate && q) {
@@ -153,10 +154,9 @@
         findNext(cm, rev);
       }
     } else {
-      dialog(cm, getQueryDialog(cm) + getDoCaseSensitive(cm), "Search for:", q, function(inputs) {
-        if (inputs.searchQuery && !state.query) cm.operation(function() {
-          getSearchState(cm).caseSensitive = inputs.caseSensitive;
-          startSearch(cm, state, inputs.searchQuery);
+      dialog(cm, getQueryDialog(cm), "Search for:", q, function(query) {
+        if (query && !state.query) cm.operation(function() {
+          startSearch(cm, state, query);
           state.posFrom = state.posTo = cm.getCursor();
           findNext(cm, rev);
         });
