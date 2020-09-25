@@ -121,7 +121,7 @@
       var hiding = null
       var searchNext = function(inputs, event) {
         CodeMirror.e_stop(event);
-        if (!inputs.searchQuery) return;
+        if (!inputs || !inputs.searchQuery) return;
         if (inputs.searchQuery != state.queryText || inputs.caseSensitive != state.caseSensitive) {
           state.caseSensitive = inputs.caseSensitive;
           startSearch(cm, state, inputs.searchQuery);
