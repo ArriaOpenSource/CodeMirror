@@ -101,6 +101,7 @@
   }
 
   function startSearch(cm, state, query) {
+    if (!query) return;
     state.queryText = query;
     state.query = parseQuery(query);
     cm.removeOverlay(state.overlay, queryCaseInsensitive(cm));
