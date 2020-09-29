@@ -41,6 +41,7 @@
 
   function SearchState() {
     this.posFrom = this.posTo = this.lastQuery = this.query = null;
+    this.caseSensitive = null;
     this.overlay = null;
   }
 
@@ -48,13 +49,12 @@
     return cm.state.search || (cm.state.search = new SearchState());
   }
 
-  function queryCaseInsensitive(query) {
-    return typeof query == "string" && query == query.toLowerCase();
+  function queryCaseInsensitive(cm) {
+    return !getSearchState(cm).caseSensitive;
   }
 
   function getSearchCursor(cm, query, pos) {
-    // Heuristic: if the query string is all lowercase, do a case insensitive search.
-    return cm.getSearchCursor(query, pos, {caseFold: queryCaseInsensitive(query), multiline: true});
+    return cm.getSearchCursor(query, pos, {caseFold: queryCaseInsensitive(cm), multiline: true});
   }
 
   function persistentDialog(cm, text, deflt, onEnter, onKeyDown) {
@@ -101,14 +101,15 @@
   }
 
   function startSearch(cm, state, query) {
+    if (!query) return;
     state.queryText = query;
     state.query = parseQuery(query);
-    cm.removeOverlay(state.overlay, queryCaseInsensitive(state.query));
-    state.overlay = searchOverlay(state.query, queryCaseInsensitive(state.query));
+    cm.removeOverlay(state.overlay, queryCaseInsensitive(cm));
+    state.overlay = searchOverlay(state.query, queryCaseInsensitive(cm));
     cm.addOverlay(state.overlay);
     if (cm.showMatchesOnScrollbar) {
       if (state.annotate) { state.annotate.clear(); state.annotate = null; }
-      state.annotate = cm.showMatchesOnScrollbar(state.query, queryCaseInsensitive(state.query));
+      state.annotate = cm.showMatchesOnScrollbar(state.query, queryCaseInsensitive(cm));
     }
   }
 
@@ -119,11 +120,12 @@
     if (q instanceof RegExp && q.source == "x^") q = null
     if (persistent && cm.openDialog) {
       var hiding = null
-      var searchNext = function(query, event) {
+      var searchNext = function(inputs, event) {
         CodeMirror.e_stop(event);
-        if (!query) return;
-        if (query != state.queryText) {
-          startSearch(cm, state, query);
+        if (!inputs || !inputs.searchQuery) return;
+        if (inputs.searchQuery != state.queryText || inputs.caseSensitive != state.caseSensitive) {
+          state.caseSensitive = inputs.caseSensitive;
+          startSearch(cm, state, inputs.searchQuery);
           state.posFrom = state.posTo = cm.getCursor();
         }
         if (hiding) hiding.style.opacity = 1
@@ -135,17 +137,17 @@
             (hiding = dialog).style.opacity = .4
         })
       };
-      persistentDialog(cm, getQueryDialog(cm), q, searchNext, function(event, query) {
+      persistentDialog(cm, getQueryDialog(cm) + getDoCaseSensitive(cm), q, searchNext, function(event, inputs) {
         var keyName = CodeMirror.keyName(event)
         var extra = cm.getOption('extraKeys'), cmd = (extra && extra[keyName]) || CodeMirror.keyMap[cm.getOption("keyMap")][keyName]
         if (cmd == "findNext" || cmd == "findPrev" ||
           cmd == "findPersistentNext" || cmd == "findPersistentPrev") {
           CodeMirror.e_stop(event);
-          startSearch(cm, getSearchState(cm), query);
+          startSearch(cm, getSearchState(cm), inputs.searchQuery);
           cm.execCommand(cmd);
         } else if (cmd == "find" || cmd == "findPersistent") {
           CodeMirror.e_stop(event);
-          searchNext(query, event);
+          searchNext(inputs.searchQuery, event);
         }
       });
       if (immediate && q) {
@@ -190,16 +192,19 @@
 
 
   function getQueryDialog(cm)  {
-    return '<span class="CodeMirror-search-label">' + cm.phrase("Search:") + '</span> <input type="text" style="width: 10em" class="CodeMirror-search-field"/> <span style="color: #888" class="CodeMirror-search-hint">' + cm.phrase("(Use /re/ syntax for regexp search)") + '</span>';
+    return '<span class="CodeMirror-search-label">' + cm.phrase("Search:") + '</span> <input type="text" style="width: 10em" id="searchQuery" class="CodeMirror-search-field"/> <span style="color: #888" class="CodeMirror-search-hint">' + cm.phrase("(Use /re/ syntax for regexp search)") + '</span>';
   }
   function getReplaceQueryDialog(cm) {
-    return ' <input type="text" style="width: 10em" class="CodeMirror-search-field"/> <span style="color: #888" class="CodeMirror-search-hint">' + cm.phrase("(Use /re/ syntax for regexp search)") + '</span>';
+    return ' <input type="text" style="width: 10em" id="searchQuery" class="CodeMirror-search-field"/> <span style="color: #888" class="CodeMirror-search-hint">' + cm.phrase("(Use /re/ syntax for regexp search)") + '</span>';
   }
   function getReplacementQueryDialog(cm) {
     return '<span class="CodeMirror-search-label">' + cm.phrase("With:") + '</span> <input type="text" style="width: 10em" class="CodeMirror-search-field"/>';
   }
   function getDoReplaceConfirm(cm) {
     return '<span class="CodeMirror-search-label">' + cm.phrase("Replace?") + '</span> <button>' + cm.phrase("Yes") + '</button> <button>' + cm.phrase("No") + '</button> <button>' + cm.phrase("All") + '</button> <button>' + cm.phrase("Stop") + '</button> ';
+  }
+  function getDoCaseSensitive(cm) {
+    return '<span class="CodeMirror-search-label case-sensitive">' + cm.phrase('Case sensitive:') + ' <input type="checkbox" id="caseSensitive" name="case-sensitive"></span>'
   }
 
   function replaceAll(cm, query, text) {
@@ -208,7 +213,9 @@
         if (typeof query != "string") {
           var match = cm.getRange(cursor.from(), cursor.to()).match(query);
           cursor.replace(text.replace(/\$(\d)/g, function(_, i) {return match[i];}));
-        } else cursor.replace(text);
+        } else {
+          cursor.replace(text);
+        }
       }
     });
   }
@@ -217,9 +224,10 @@
     if (cm.getOption("readOnly")) return;
     var query = cm.getSelection() || getSearchState(cm).lastQuery;
     var dialogText = '<span class="CodeMirror-search-label">' + (all ? cm.phrase("Replace all:") : cm.phrase("Replace:")) + '</span>';
-    dialog(cm, dialogText + getReplaceQueryDialog(cm), dialogText, query, function(query) {
-      if (!query) return;
-      query = parseQuery(query);
+    dialog(cm, dialogText + getReplaceQueryDialog(cm) + getDoCaseSensitive(cm), dialogText, query, function(inputs) {
+      if (!inputs.searchQuery) return;
+      getSearchState(cm).caseSensitive = inputs.caseSensitive;
+      query = parseQuery(inputs.searchQuery);
       dialog(cm, getReplacementQueryDialog(cm), cm.phrase("Replace with:"), "", function(text) {
         text = parseString(text)
         if (all) {

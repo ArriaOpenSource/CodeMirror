@@ -56,7 +56,8 @@
       }
     }
 
-    var inp = dialog.getElementsByTagName("input")[0], button;
+    var inputs = dialog.getElementsByTagName("input"), button;
+    var inp = inputs[0];
     if (inp) {
       inp.focus();
 
@@ -79,11 +80,38 @@
           CodeMirror.e_stop(e);
           close();
         }
-        if (e.keyCode == 13) callback(inp.value, e);
+        if (e.keyCode == 13) {
+          if (inputs.length > 1) {
+            var inputsObj = {};
+            for (var i = 0; i < inputs.length; i++) {
+              if (inputs[i].type === "checkbox") {
+                inputsObj[inputs[i].id] = inputs[i].checked;
+                continue;
+              }
+
+              inputsObj[inputs[i].id] = inputs[i].value
+            }
+            callback(inputsObj, e)
+          } else {
+            callback(inp.value, e)
+          }
+        }
       });
 
       if (options.closeOnBlur !== false) CodeMirror.on(dialog, "focusout", function (evt) {
-        if (evt.relatedTarget !== null) close();
+        var targetElement = evt.relatedTarget;
+
+        do {
+          if (targetElement === dialog || targetElement === null) {
+            // This is a click inside the dialog or outwith the editor, do nothing
+            return;
+          }
+          // Go up the DOM
+          targetElement = targetElement.parentNode;
+        } while (targetElement);
+
+        // This is a click outside the dialog, close it
+        close();
       });
     } else if (button = dialog.getElementsByTagName("button")[0]) {
       CodeMirror.on(button, "click", function() {
